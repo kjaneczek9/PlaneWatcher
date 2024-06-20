@@ -74,9 +74,8 @@ if __name__ == "__main__":
                         dest = get_dest(found_plane.upper())
                         aircraft = get_aircraft_type(plane.get('hex',None))
                         if dest and 'Los Angeles' in dest:
-                            dest = "landing"
                             continue
-                        if '777' in aircraft and dest != 'landing':
+                        if '777' in aircraft:
                             print("================== 777 ALERT =====================")
                         print(f"{found_plane}\t\t\t{aircraft}\t\t\t\t{dest}")
                         printed.append(found_plane)
