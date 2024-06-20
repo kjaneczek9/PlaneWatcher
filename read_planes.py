@@ -11,7 +11,6 @@ def get_depts():
     
     json_string = '{' + shortest + '}'
 
-    # Convert the JSON string to a Python dictionary
     data = json.loads(json_string)
     
     return data['flights']
