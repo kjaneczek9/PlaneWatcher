@@ -1,0 +1,88 @@
+diff --git a/dump1090.c b/dump1090.c
+index ed9b2bf..fed5b94 100644
+--- a/dump1090.c
++++ b/dump1090.c
+@@ -1826,35 +1826,70 @@ void interactiveShowData(void) {
+     time_t now = time(NULL);
+     char progress[4];
+     int count = 0;
+-
+-    memset(progress,' ',3);
+-    progress[time(NULL)%3] = '.';
++    
++    // Open the JSON file for writing
++    FILE *jsonFile = fopen("aircraft_data.json.tmp", "w");
++    if (jsonFile == NULL) {
++        perror("Unable to open file for writing");
++        return;
++    }
++    
++    // Write the opening bracket for the JSON array
++    fprintf(jsonFile, "{\n\"aircraft\" : [\n");
++    
++    memset(progress, ' ', 3);
++    progress[time(NULL) % 3] = '.';
+     progress[3] = '\0';
+-
+-    printf("\x1b[H\x1b[2J");    /* Clear the screen */
++    
++    printf("\x1b[H\x1b[2J");    // Clear the screen
+     printf(
+-"Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
+-"--------------------------------------------------------------------------------\n",
+-        progress);
++        "Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
++        "--------------------------------------------------------------------------------\n",
++        progress
++    );
+ 
+-    while(a && count < Modes.interactive_rows) {
++    while (a && count < Modes.interactive_rows) {
+         int altitude = a->altitude, speed = a->speed;
+ 
+-        /* Convert units to metric if --metric was specified. */
++        // Convert units to metric if --metric was specified.
+         if (Modes.metric) {
+             altitude /= 3.2828;
+             speed *= 1.852;
+         }
+ 
+         printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+-            a->hexaddr, a->flight, altitude, speed,
+-            a->lat, a->lon, a->track, a->messages,
+-            (int)(now - a->seen));
++               a->hexaddr, a->flight, altitude, speed,
++               a->lat, a->lon, a->track, a->messages,
++               (int)(now - a->seen));
++
++        // Write the aircraft data to the JSON file
++        fprintf(jsonFile, "  {\n");
++        fprintf(jsonFile, "    \"hex\": \"%s\",\n", a->hexaddr);
++        fprintf(jsonFile, "    \"flight\": \"%s\",\n", a->flight);
++        fprintf(jsonFile, "    \"altitude\": %d,\n", altitude);
++        fprintf(jsonFile, "    \"speed\": %d,\n", speed);
++        fprintf(jsonFile, "    \"lat\": %.03f,\n", a->lat);
++        fprintf(jsonFile, "    \"lon\": %.03f,\n", a->lon);
++        fprintf(jsonFile, "    \"track\": %d,\n", a->track);
++        fprintf(jsonFile, "    \"messages\": %ld,\n", a->messages);
++        fprintf(jsonFile, "    \"seen\": %d\n", (int)(now - a->seen));
++        fprintf(jsonFile, "  }%s\n", a->next && count + 1 < Modes.interactive_rows ? "," : "");
++
+         a = a->next;
+         count++;
+     }
++    
++    // Write the closing bracket for the JSON array
++    fprintf(jsonFile, "]}\n");
++
++    // Close the JSON file
++    fclose(jsonFile);
++
++    // Atomically rename the temporary file to the desired file
++    rename("aircraft_data.json.tmp", "aircraft_data.json");
+ }
+ 
++
+ /* When in interactive mode If we don't receive new nessages within
+  * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
+ void interactiveRemoveStaleAircrafts(void) {

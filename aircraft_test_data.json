@@ -1,0 +1,256 @@
+{
+"aircraft" : [
+  {
+    "hex": "34718e",
+    "flight": "",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 1,
+    "seen": 11
+  },
+  {
+    "hex": "a3887f",
+    "flight": "",
+    "altitude": 3650,
+    "speed": 146,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 221,
+    "messages": 18,
+    "seen": 0
+  },
+  {
+    "hex": "a89915",
+    "flight": "",
+    "altitude": 16450,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 3,
+    "seen": 14
+  },
+  {
+    "hex": "ab486e",
+    "flight": "",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 1,
+    "seen": 34
+  },
+  {
+    "hex": "c080a2",
+    "flight": "",
+    "altitude": 575,
+    "speed": 132,
+    "lat": 33.942,
+    "lon": -118.335,
+    "track": 263,
+    "messages": 71,
+    "seen": 0
+  },
+  {
+    "hex": "40771a",
+    "flight": "",
+    "altitude": 225,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 5,
+    "seen": 21
+  },
+  {
+    "hex": "a2e235",
+    "flight": "SKW4098 ",
+    "altitude": 1750,
+    "speed": 168,
+    "lat": 33.934,
+    "lon": -118.435,
+    "track": 262,
+    "messages": 1091,
+    "seen": 0
+  },
+  {
+    "hex": "aa73a0",
+    "flight": "SWA3428 ",
+    "altitude": 225,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 9,
+    "seen": 44
+  },
+  {
+    "hex": "a670a3",
+    "flight": "",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 2,
+    "seen": 24
+  },
+  {
+    "hex": "ab58b2",
+    "flight": "DAL2861 ",
+    "altitude": 200,
+    "speed": 103,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 263,
+    "messages": 143,
+    "seen": 1
+  },
+  {
+    "hex": "a67bd3",
+    "flight": "",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 4,
+    "seen": 20
+  },
+  {
+    "hex": "a6c89d",
+    "flight": "",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 4,
+    "seen": 39
+  },
+  {
+    "hex": "a178ae",
+    "flight": "SKW3360 ",
+    "altitude": 3025,
+    "speed": 222,
+    "lat": 33.942,
+    "lon": -118.514,
+    "track": 266,
+    "messages": 1893,
+    "seen": 0
+  },
+  {
+    "hex": "a28ee7",
+    "flight": "SWA3361 ",
+    "altitude": 225,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 146,
+    "seen": 2
+  },
+  {
+    "hex": "a47d69",
+    "flight": "HAL16   ",
+    "altitude": 38975,
+    "speed": 494,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 77,
+    "messages": 26,
+    "seen": 1
+  },
+  {
+    "hex": "a8a478",
+    "flight": "QXE2065 ",
+    "altitude": 225,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 96,
+    "seen": 1
+  },
+  {
+    "hex": "a0275c",
+    "flight": "AAL306  ",
+    "altitude": 0,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 17,
+    "seen": 24
+  },
+  {
+    "hex": "a76f43",
+    "flight": "UAL1205 ",
+    "altitude": 200,
+    "speed": 79,
+    "lat": 33.951,
+    "lon": -118.417,
+    "track": 263,
+    "messages": 256,
+    "seen": 2
+  },
+  {
+    "hex": "406b20",
+    "flight": "BAW4Q   ",
+    "altitude": 5500,
+    "speed": 279,
+    "lat": 33.808,
+    "lon": -118.576,
+    "track": 158,
+    "messages": 2793,
+    "seen": 0
+  },
+  {
+    "hex": "ac078b",
+    "flight": "SWA3215 ",
+    "altitude": 225,
+    "speed": 0,
+    "lat": 0.000,
+    "lon": 0.000,
+    "track": 0,
+    "messages": 202,
+    "seen": 29
+  },
+  {
+    "hex": "a2f584",
+    "flight": "ASA1093 ",
+    "altitude": 8125,
+    "speed": 282,
+    "lat": 33.989,
+    "lon": -118.674,
+    "track": 343,
+    "messages": 2220,
+    "seen": 13
+  },
+  {
+    "hex": "aa7b33",
+    "flight": "SWA966  ",
+    "altitude": 20100,
+    "speed": 393,
+    "lat": 33.463,
+    "lon": -118.354,
+    "track": 298,
+    "messages": 366,
+    "seen": 1
+  },
+  {
+    "hex": "4ba952",
+    "flight": "THY10   ",
+    "altitude": 7050,
+    "speed": 321,
+    "lat": 33.780,
+    "lon": -118.474,
+    "track": 70,
+    "messages": 3431,
+    "seen": 0
+  }
+]}
