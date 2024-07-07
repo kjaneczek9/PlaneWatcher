@@ -82,8 +82,8 @@ def get_flying_planes():
     return flying_planes
 
 
-@app.route("/api/sort_planes", methods=["GET"])
-def sort_planes():
+@app.route("/api/gather_planes", methods=["GET"])
+def gather_planes():
     planes = get_flying_planes()
     plane_objs = []
     for obj in planes:
@@ -93,6 +93,18 @@ def sort_planes():
         obj["landing"] = is_landing(obj["destination"])
         plane_objs.append(obj)
     return plane_objs
+
+@app.route("/api/plane_tracker", methods = ["GET"])
+def plane_tracker():
+    planes = gather_planes()
+    sort_dict = {"CLOSE":{}, "FAR":{}}
+    for plane in planes:
+        if not plane['landing']:
+            if plane['runway'] == "Far":
+                sort_dict["FAR"] = plane
+            elif plane['runway'] == "Close":
+                sort_dict["CLOSE"] = plane
+    return sort_dict
 
 
 @app.route("/api/get_far_runway", methods=["GET"])
@@ -116,4 +128,4 @@ def close_runway_planes():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
