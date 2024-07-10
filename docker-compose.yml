@@ -1,0 +1,24 @@
+version: '3'
+services:
+  daq:
+    build: ./daq
+    volumes:
+      - daq-data:/data
+    networks:
+      - app-network
+    privileged: true
+
+  api:
+    build: ./api
+    volumes:
+      - daq-data:/data
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+volumes:
+  daq-data:
+
+networks:
+  app-network:

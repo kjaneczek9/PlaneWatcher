@@ -1828,7 +1828,7 @@ void interactiveShowData(void) {
     int count = 0;
     
     // Open the JSON file for writing
-    FILE *jsonFile = fopen("aircraft_data.json.tmp", "w");
+    FILE *jsonFile = fopen("data/aircraft_data.json.tmp", "w");
     if (jsonFile == NULL) {
         perror("Unable to open file for writing");
         return;
@@ -1886,7 +1886,7 @@ void interactiveShowData(void) {
     fclose(jsonFile);
 
     // Atomically rename the temporary file to the desired file
-    rename("aircraft_data.json.tmp", "aircraft_data.json");
+    rename("data/aircraft_data.json.tmp", "data/aircraft_data.json");
 }
 
 

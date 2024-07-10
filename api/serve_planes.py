@@ -5,6 +5,9 @@ from functools import lru_cache
 import requests
 from flask import Flask, jsonify, request
 from flask_caching import Cache
+from flask_cors import CORS
+
+import constants 
 
 app = Flask(__name__)
 
@@ -13,7 +16,7 @@ app.config["CACHE_TYPE"] = (
     "SimpleCache"  # Use 'RedisCache' for Redis or other supported types
 )
 app.config["CACHE_DEFAULT_TIMEOUT"] = 60  # Cache timeout in seconds
-
+CORS(app)
 cache = Cache(app)
 
 
@@ -38,24 +41,28 @@ def get_aircraft(hex_code):
 @app.route("/api/get_destination/<callsign>", methods=["GET"])
 @lru_cache(maxsize=128)
 def get_destination(callsign):
-    flight_number = callsign.upper().strip()
-    url = f"https://www.radarbox.com/data/flights/{flight_number}"
-    res = requests.get(url)
-    if res.status_code == 200:
-        match = re.search(r"to\s+([^\.,]+(?:, [A-Z]{2})?)", res.text)
-        if match:
-            destination = match.group(1)
-            if 'on AirNav RadarBox"/>' in destination:
-                idx = destination.find('on AirNav RadarBox"/>')
-                destination = destination[:idx]
-            return destination
+    if len(callsign) > 0:
+        flight_number = callsign.upper().strip()
+        url = f"https://www.radarbox.com/data/flights/{flight_number}"
+        res = requests.get(url)
+        if res.status_code == 200:
+            #destination has property `"+Object
+            #if 'This aircraft is present on our blocked aircraft list' in res.text:
+             #   return "Blocked"
+            match = re.search(constants.AIRNAV_RADARBOX_DESTINATION_REGEX, res.text)
+            if match:
+                destination = match.group(1)
+                if constants.AIRNAV_RADARBOX_INTERNATIONAL_COND in destination:
+                    idx = destination.find(constants.AIRNAV_RADARBOX_INTERNATIONAL_COND)
+                    destination = destination[:idx]
+                return destination
     return None
 
 
 def get_runway(latitude):
-    if round(latitude, 2) == 33.93 or round(latitude, 2) == 33.94:
+    if round(latitude, 2) in constants.FAR_LATITUDE:
         return "Far"
-    elif round(latitude, 2) == 33.95:
+    elif round(latitude, 2) == constants.CLOSE_LATITUDE:   
         return "Close"
     return None
 
@@ -66,7 +73,7 @@ def is_landing(destination):
 
 @app.route("/api/all_planes", methods=["GET"])
 def read_dump1090_output():
-    with open("aircraft_data.json", "r") as file:
+    with open("data/aircraft_data.json", "r") as file:
         planes = json.load(file)
         file.close()
     return planes
@@ -77,7 +84,7 @@ def get_flying_planes():
     planes = read_dump1090_output()
     flying_planes = []
     for obj in planes["aircraft"]:
-        if obj["altitude"] != 0 and obj["altitude"] < 1900 and obj["speed"] > 0:
+        if obj["altitude"] != 0 and obj["altitude"] < 2100 and obj["speed"] > 0:
             flying_planes.append(obj)
     return flying_planes
 
@@ -97,13 +104,13 @@ def gather_planes():
 @app.route("/api/plane_tracker", methods = ["GET"])
 def plane_tracker():
     planes = gather_planes()
-    sort_dict = {"CLOSE":{}, "FAR":{}}
+    sort_dict = {"CLOSE":[], "FAR":[]}
     for plane in planes:
-        if not plane['landing']:
+        if not plane['landing'] and plane['landing'] != None:
             if plane['runway'] == "Far":
-                sort_dict["FAR"] = plane
+                sort_dict["FAR"].append(plane)
             elif plane['runway'] == "Close":
-                sort_dict["CLOSE"] = plane
+                sort_dict["CLOSE"].append(plane)
     return sort_dict
 
 
