@@ -16,6 +16,14 @@ services:
       - "5000:5000"
     networks:
       - app-network
+  client:
+    build: ./client
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+    depends_on:
+      - api
 
 volumes:
   daq-data:
