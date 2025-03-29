@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Aircraft Tracker</title>
+    <title>Live @ LAX</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,7 +25,7 @@
     </style>
 </head>
 <body>
-    <h2>Live Aircraft Tracker</h2>
+    <h2>Live @ LAX</h2>
     <table id="aircraftTable">
         <thead>
             <tr>
@@ -37,7 +37,7 @@
                 <th>Lat</th>
                 <th>Lon</th>
                 <th>Runway</th>
-                <th>Destination</th> <!-- New Destination Column -->
+                <th>Destination</th>
             </tr>
         </thead>
         <tbody>
@@ -61,7 +61,7 @@
             const tableBody = document.querySelector("#aircraftTable tbody");
             tableBody.innerHTML = ""; // Clear previous data
 
-            const allAircraft = [...data.CLOSE, ...data.FAR]; // Merge both lists
+            const allAircraft = [...data.CLOSE, ...data.FAR]; // Merges both resp
 
             if (allAircraft.length === 0) {
                 tableBody.innerHTML = "<tr><td colspan='9'>No aircraft detected</td></tr>";
@@ -79,15 +79,15 @@
                         <td>${plane.lat}</td>
                         <td>${plane.lon}</td>
                         <td>${plane.runway}</td>
-                        <td>${plane.destination || "Unknown"}</td> <!-- Destination field -->
+                        <td>${plane.destination || "Unknown"}</td>
                     </tr>
                 `;
                 tableBody.innerHTML += row;
             });
         }
 
-        // Fetch data every 15 seconds
-        fetchAircraftData(); // Initial call
+        // 10 second fetch
+        fetchAircraftData();
         setInterval(fetchAircraftData, 1000);
     </script>
 </body>
