@@ -22,6 +22,9 @@
             background-color: #007bff;
             color: white;
         }
+        .highlight { 
+            background-color: #ffcccc;
+        }
     </style>
 </head>
 <body>
@@ -69,17 +72,18 @@
             }
 
             allAircraft.forEach(plane => {
+                const highlightClass = /777|747|380/.test(plane.aircraft) ? "highlight" : "";
                 const row = `
                     <tr>
-                        <td>${plane.flight.trim()}</td>
-                        <td>${plane.aircraft}</td>
-                        <td>${plane.altitude}</td>
-                        <td>${plane.speed}</td>
-                        <td>${plane.track}</td>
-                        <td>${plane.lat}</td>
-                        <td>${plane.lon}</td>
-                        <td>${plane.runway}</td>
-                        <td>${plane.destination || "Unknown"}</td>
+                        <td class="${highlightClass}">${plane.flight.trim()}</td>
+                        <td class="${highlightClass}">${plane.aircraft}</td>
+                        <td class="${highlightClass}">${plane.altitude}</td>
+                        <td class="${highlightClass}">${plane.speed}</td>
+                        <td class="${highlightClass}">${plane.track}</td>
+                        <td class="${highlightClass}">${plane.lat}</td>
+                        <td class="${highlightClass}">${plane.lon}</td>
+                        <td class="${highlightClass}">${plane.runway}</td>
+                        <td class="${highlightClass}">${plane.destination || "Unknown"}</td>
                     </tr>
                 `;
                 tableBody.innerHTML += row;

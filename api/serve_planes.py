@@ -6,10 +6,15 @@ import requests
 from flask import Flask, jsonify, request
 from flask_caching import Cache
 from flask_cors import CORS
+import logging
+
 
 import constants 
 
 app = Flask(__name__)
+
+logging.basicConfig(level=logging.INFO)  # Adjust the level as needed
+logger = logging.getLogger(__name__)
 
 # Configure cache
 app.config["CACHE_TYPE"] = (
@@ -46,15 +51,14 @@ def get_destination(callsign):
         url = f"https://www.radarbox.com/data/flights/{flight_number}"
         res = requests.get(url)
         if res.status_code == 200:
-            #destination has property `"+Object
-            #if 'This aircraft is present on our blocked aircraft list' in res.text:
-             #   return "Blocked"
             match = re.search(constants.AIRNAV_RADARBOX_DESTINATION_REGEX, res.text)
             if match:
                 destination = match.group(1)
                 if constants.AIRNAV_RADARBOX_INTERNATIONAL_COND in destination:
                     idx = destination.find(constants.AIRNAV_RADARBOX_INTERNATIONAL_COND)
                     destination = destination[:idx]
+                if ' on AirNav Radar"/>' in destination:
+                    destination = destination.split(' on AirNav Radar"/>')[0]
                 return destination
     return None
 
