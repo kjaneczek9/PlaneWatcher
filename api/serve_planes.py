@@ -63,6 +63,7 @@ def get_destination(callsign):
     return None
 
 @app.route("/api/get_flight_time/<callsign>", methods=["GET"])
+@lru_cache(maxsize=128)
 def get_flight_time(callsign):
     if len(callsign) > 0:
         flight_number = callsign.upper().strip()
