@@ -7,6 +7,7 @@ from flask import Flask, jsonify, request
 from flask_caching import Cache
 from flask_cors import CORS
 import logging
+import time
 
 
 import constants 
@@ -23,7 +24,6 @@ app.config["CACHE_TYPE"] = (
 app.config["CACHE_DEFAULT_TIMEOUT"] = 60  # Cache timeout in seconds
 CORS(app)
 cache = Cache(app)
-
 
 @app.route("/")
 def home():
@@ -60,6 +60,20 @@ def get_destination(callsign):
                 if ' on AirNav Radar"/>' in destination:
                     destination = destination.split(' on AirNav Radar"/>')[0]
                 return destination
+    return None
+
+@app.route("/api/get_flight_time/<callsign>", methods=["GET"])
+def get_flight_time(callsign):
+    if len(callsign) > 0:
+        flight_number = callsign.upper().strip()
+        url = f"https://www.radarbox.com/data/flights/{flight_number}"
+        res = requests.get(url)
+        if res.status_code == 200:
+            match = re.search(r"LANDING IN (?:(\d+)h )?(\d+)m", res.text)
+            if match:
+                hours = int(match.group(1)) if match.group(1) else 0
+                minutes = int(match.group(2))
+                return f"{hours}h {minutes}m"
     return None
 
 
@@ -102,6 +116,7 @@ def gather_planes():
         obj["runway"] = get_runway(obj["lat"])
         obj["aircraft"] = get_aircraft(obj["hex"])
         obj["landing"] = is_landing(obj["destination"])
+        obj["flight_time"] = get_flight_time(obj["flight"])
         plane_objs.append(obj)
     return plane_objs
 
