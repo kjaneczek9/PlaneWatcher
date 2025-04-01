@@ -20,6 +20,8 @@ services:
     build: ./client
     ports:
       - "8080:80"
+    volumes:
+      - ./client:/usr/share/nginx/html/
     networks:
       - app-network
     depends_on:
