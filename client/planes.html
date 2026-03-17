@@ -47,7 +47,7 @@
                 <th>Lon</th>
                 <th>Runway</th>
                 <th>Destination</th>
-                <th>Flight Time</th>
+                <th>Airline</th>
             </tr>
         </thead>
         <tbody>
@@ -56,7 +56,7 @@
 
     <script>
         const API_URL = "http://192.168.1.160:5000/api/plane_tracker";
-        let dotCount = 3; // Start at max dots
+        let dotCount = 3;
         let countingDown = true; // Toggle direction
     
         async function fetchAircraftData() {
@@ -92,7 +92,7 @@
                         <td class="${highlightClass}">${plane.lon}</td>
                         <td class="${highlightClass}">${plane.runway}</td>
                         <td class="${highlightClass}">${plane.destination || "Unknown"}</td>
-                        <td class="${highlightClass}">${plane.flight_time || "Unknown"}</td>
+                        <td class="${highlightClass}">${plane.airline || "Unknown"}</td>
                     </tr>
                 `;
                 tableBody.innerHTML += row;

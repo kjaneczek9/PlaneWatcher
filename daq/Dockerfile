@@ -10,7 +10,8 @@ RUN apt-get update && \
     pkg-config \
     libusb-1.0-0-dev \
     git \
-    libc6
+    libc6 \
+    wget
 
 
 COPY . .
@@ -26,6 +27,14 @@ RUN cmake ../ -DINSTALL_UDEV_RULES=ON \
     && make install
 ENV LD_LIBRARY_PATH=/usr/local/lib/
 
+# Add rtl-sdr rules (download directly from github)
+RUN wget -O /etc/udev/rules.d/rtl-sdr.rules \
+    https://raw.githubusercontent.com/osmocom/rtl-sdr/master/rtl-sdr.rules
+
+# Make sure to blacklist dvb_usb_rtl28xxu on the host:
+# echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtl.conf
+
+
 WORKDIR /
 RUN make clean
 RUN make BLADERF=no RTLSDR=yes
@@ -38,4 +47,6 @@ RUN cp /usr/local/lib/librtlsdr.so.0 /
 EXPOSE 30002
 
 # CMD instruction to start dump1090 with specified options
-CMD ["./dump1090", "--interactive", "--net", "--net-ro-port", "30002"]
+CMD ["sleep", "infinity"]
+#CMD ["./dump1090", "--interactive", "--net", "--net-ro-port", "30002"]
+#ENTRYPOINT ["/entrypoint.sh"]

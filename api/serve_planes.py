@@ -4,7 +4,6 @@ from functools import lru_cache
 
 import requests
 from flask import Flask, jsonify, request
-from flask_caching import Cache
 from flask_cors import CORS
 import logging
 import time
@@ -17,38 +16,77 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)  # Adjust the level as needed
 logger = logging.getLogger(__name__)
 
-# Configure cache
-app.config["CACHE_TYPE"] = (
-    "SimpleCache"  # Use 'RedisCache' for Redis or other supported types
-)
-app.config["CACHE_DEFAULT_TIMEOUT"] = 60  # Cache timeout in seconds
 CORS(app)
-cache = Cache(app)
 
 @app.route("/")
 def home():
     return "hot girls use flask"
 
-
-@app.route("/api/get_aircraft/<hex_code>", methods=["GET"])
-@lru_cache(maxsize=128)
 def get_aircraft(hex_code):
-    res = requests.get(
-        f"https://opensky-network.org/api/metadata/aircraft/icao/{hex_code}"
-    )
-    if res.status_code == 200:
-        data = res.json()
-        model = data.get("model")
-        return model
+    # First, check if we already found this hex code
+    with open("instance_state/inst_seen_planes.json", "r") as file:
+        seen_planes = json.load(file)
+        file.close()
+    
+    if hex_code.upper() in seen_planes:
+        return seen_planes[hex_code.upper()]
+    else:
+        res = requests.get(
+            f"https://opensky-network.org/api/metadata/aircraft/icao/{hex_code}"
+        )
+        if res.status_code == 200:
+            data = res.json()
+            model = data.get("model")
+            seen_planes[hex_code.upper()] = model
+            with open("instance_state/inst_seen_planes.json", "w") as f:
+                json.dump(seen_planes, f, indent=4)
+            return model
     return None
 
+def get_airline_code(callsign):
+    if len(callsign) == 0:
+        return None
+    
+    # split callsign by number
+    letters = re.findall(r"[A-Za-z]+", callsign)[0].upper()
+    
+    # Check known airline codes first - to avoid overloading this API.
+    with open("known_airlines.json", "r") as file:
+        airlines = json.load(file)
+        file.close()
+    
+    if letters in airlines:
+        return airlines[letters]
+    
+    # Check local container instance.
+    with open("instance_state/inst_known_airlines.json", "r") as f:
+        data = json.load(f)
+        file.close()
 
-@app.route("/api/get_destination/<callsign>", methods=["GET"])
-@lru_cache(maxsize=128)
+    if letters in data:
+        return data[letters]
+
+    # Otherwise query, but add to instance known to avoid again.
+    else:
+        res = requests.get(f"https://www.flightstats.com/v2/api-next/search/airline-airport?query={letters}&type=airline").json()
+        if res["data"]:
+            airline = res["data"][0]['fs']
+            data[letters] = airline
+        else:
+            data[letters] = "404"
+
+        with open("instance_state/inst_known_airlines.json", "w") as f:
+            json.dump(data, f, indent=4)
+            
+        return airline
+    
+
+
 def get_destination(callsign):
     if len(callsign) > 0:
         flight_number = callsign.upper().strip()
-        url = f"https://www.radarbox.com/data/flights/{flight_number}"
+        return None
+        #url = f"https://www.radarbox.com/data/flights/{flight_number}"
         res = requests.get(url)
         if res.status_code == 200:
             match = re.search(constants.AIRNAV_RADARBOX_DESTINATION_REGEX, res.text)
@@ -62,19 +100,18 @@ def get_destination(callsign):
                 return destination
     return None
 
-@app.route("/api/get_flight_time/<callsign>", methods=["GET"])
-@lru_cache(maxsize=128)
+
 def get_flight_time(callsign):
     if len(callsign) > 0:
         flight_number = callsign.upper().strip()
-        url = f"https://www.radarbox.com/data/flights/{flight_number}"
-        res = requests.get(url)
-        if res.status_code == 200:
-            match = re.search(r"LANDING IN (?:(\d+)h )?(\d+)m", res.text)
-            if match:
-                hours = int(match.group(1)) if match.group(1) else 0
-                minutes = int(match.group(2))
-                return f"{hours}h {minutes}m"
+        # url = f"https://www.radarbox.com/data/flights/{flight_number}"
+        # res = requests.get(url)
+        # if res.status_code == 200:
+        #     match = re.search(r"LANDING IN (?:(\d+)h )?(\d+)m", res.text)
+        #     if match:
+        #         hours = int(match.group(1)) if match.group(1) else 0
+        #         minutes = int(match.group(2))
+        #         return f"{hours}h {minutes}m"
     return None
 
 
@@ -90,6 +127,8 @@ def is_landing(destination):
     return destination and "Los Angeles" in destination
 
 
+
+
 @app.route("/api/all_planes", methods=["GET"])
 def read_dump1090_output():
     with open("data/aircraft_data.json", "r") as file:
@@ -103,7 +142,7 @@ def get_flying_planes():
     planes = read_dump1090_output()
     flying_planes = []
     for obj in planes["aircraft"]:
-        if obj["altitude"] != 0 and obj["altitude"] < 2100 and obj["speed"] > 0:
+        if obj["altitude"] > 400 and obj["altitude"] < 2100 and obj["speed"] > 0:
             flying_planes.append(obj)
     return flying_planes
 
@@ -113,6 +152,7 @@ def gather_planes():
     planes = get_flying_planes()
     plane_objs = []
     for obj in planes:
+        obj["airline"] = get_airline_code(obj["flight"])
         obj["destination"] = get_destination(obj["flight"])
         obj["runway"] = get_runway(obj["lat"])
         obj["aircraft"] = get_aircraft(obj["hex"])
@@ -126,7 +166,8 @@ def plane_tracker():
     planes = gather_planes()
     sort_dict = {"CLOSE":[], "FAR":[]}
     for plane in planes:
-        if not plane['landing'] and plane['landing'] != None:
+        if True:
+        #if not plane['landing'] and plane['landing'] != None:
             if plane['runway'] == "Far":
                 sort_dict["FAR"].append(plane)
             elif plane['runway'] == "Close":
