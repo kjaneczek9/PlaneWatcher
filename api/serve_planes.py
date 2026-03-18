@@ -2,16 +2,20 @@ import json
 import re
 from functools import lru_cache
 
-import requests
-from flask import Flask, jsonify, request
+from flask import Flask
+from flask_socketio import SocketIO
 from flask_cors import CORS
 import logging
 import time
+import threading
 
+from Plane import Plane
+from Sky import Sky
 
 import constants 
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 logging.basicConfig(level=logging.INFO)  # Adjust the level as needed
 logger = logging.getLogger(__name__)
@@ -20,180 +24,65 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "hot girls use flask"
-
-def get_aircraft(hex_code):
-    # First, check if we already found this hex code
-    with open("instance_state/inst_seen_planes.json", "r") as file:
-        seen_planes = json.load(file)
-        file.close()
-    
-    if hex_code.upper() in seen_planes:
-        return seen_planes[hex_code.upper()]
-    else:
-        res = requests.get(
-            f"https://opensky-network.org/api/metadata/aircraft/icao/{hex_code}"
-        )
-        if res.status_code == 200:
-            data = res.json()
-            model = data.get("model")
-            seen_planes[hex_code.upper()] = model
-            with open("instance_state/inst_seen_planes.json", "w") as f:
-                json.dump(seen_planes, f, indent=4)
-            return model
-    return None
-
-def get_airline_code(callsign):
-    if len(callsign) == 0:
-        return None
-    
-    # split callsign by number
-    letters = re.findall(r"[A-Za-z]+", callsign)[0].upper()
-    
-    # Check known airline codes first - to avoid overloading this API.
-    with open("known_airlines.json", "r") as file:
-        airlines = json.load(file)
-        file.close()
-    
-    if letters in airlines:
-        return airlines[letters]
-    
-    # Check local container instance.
-    with open("instance_state/inst_known_airlines.json", "r") as f:
-        data = json.load(f)
-        file.close()
-
-    if letters in data:
-        return data[letters]
-
-    # Otherwise query, but add to instance known to avoid again.
-    else:
-        res = requests.get(f"https://www.flightstats.com/v2/api-next/search/airline-airport?query={letters}&type=airline").json()
-        if res["data"]:
-            airline = res["data"][0]['fs']
-            data[letters] = airline
-        else:
-            data[letters] = "404"
-
-        with open("instance_state/inst_known_airlines.json", "w") as f:
-            json.dump(data, f, indent=4)
-            
-        return airline
-    
-
-
-def get_destination(callsign):
-    if len(callsign) > 0:
-        flight_number = callsign.upper().strip()
-        return None
-        #url = f"https://www.radarbox.com/data/flights/{flight_number}"
-        res = requests.get(url)
-        if res.status_code == 200:
-            match = re.search(constants.AIRNAV_RADARBOX_DESTINATION_REGEX, res.text)
-            if match:
-                destination = match.group(1)
-                if constants.AIRNAV_RADARBOX_INTERNATIONAL_COND in destination:
-                    idx = destination.find(constants.AIRNAV_RADARBOX_INTERNATIONAL_COND)
-                    destination = destination[:idx]
-                if ' on AirNav Radar"/>' in destination:
-                    destination = destination.split(' on AirNav Radar"/>')[0]
-                return destination
-    return None
-
-
-def get_flight_time(callsign):
-    if len(callsign) > 0:
-        flight_number = callsign.upper().strip()
-        # url = f"https://www.radarbox.com/data/flights/{flight_number}"
-        # res = requests.get(url)
-        # if res.status_code == 200:
-        #     match = re.search(r"LANDING IN (?:(\d+)h )?(\d+)m", res.text)
-        #     if match:
-        #         hours = int(match.group(1)) if match.group(1) else 0
-        #         minutes = int(match.group(2))
-        #         return f"{hours}h {minutes}m"
-    return None
-
-
-def get_runway(latitude):
-    if round(latitude, 2) in constants.FAR_LATITUDE:
-        return "Far"
-    elif round(latitude, 2) == constants.CLOSE_LATITUDE:   
-        return "Close"
-    return None
-
-
-def is_landing(destination):
-    return destination and "Los Angeles" in destination
-
-
-
+    return read_dump1090_output()
 
 @app.route("/api/all_planes", methods=["GET"])
 def read_dump1090_output():
+    """
+    Raw dump1090 output.
+    """
     with open("data/aircraft_data.json", "r") as file:
         planes = json.load(file)
         file.close()
-    return planes
-
-
-@app.route("/api/get_flying_planes", methods=["GET"])
-def get_flying_planes():
-    planes = read_dump1090_output()
-    flying_planes = []
+    
+    parsed_planes = []
     for obj in planes["aircraft"]:
-        if obj["altitude"] > 400 and obj["altitude"] < 2100 and obj["speed"] > 0:
-            flying_planes.append(obj)
-    return flying_planes
+        # Quick skips where we can get them.
+        if obj["speed"] <= 5 or obj["lat"] == 0 or obj["lon"] == 0 or obj["lon"] >= -118.398:
+            continue
+        parsed_planes.append(obj)
+    
+    return parsed_planes
 
-
-@app.route("/api/gather_planes", methods=["GET"])
-def gather_planes():
-    planes = get_flying_planes()
-    plane_objs = []
+def get_filtered_planes():
+    """
+    Sorts through and filters 1090 output into what should be shown.
+    """
+    planes = read_dump1090_output()
+    
     for obj in planes:
-        obj["airline"] = get_airline_code(obj["flight"])
-        obj["destination"] = get_destination(obj["flight"])
-        obj["runway"] = get_runway(obj["lat"])
-        obj["aircraft"] = get_aircraft(obj["hex"])
-        obj["landing"] = is_landing(obj["destination"])
-        obj["flight_time"] = get_flight_time(obj["flight"])
-        plane_objs.append(obj)
-    return plane_objs
+        sky.process_plane(Plane(obj))
+    
+    return sky.planes_to_show
+
 
 @app.route("/api/plane_tracker", methods = ["GET"])
 def plane_tracker():
-    planes = gather_planes()
-    sort_dict = {"CLOSE":[], "FAR":[]}
-    for plane in planes:
-        if True:
-        #if not plane['landing'] and plane['landing'] != None:
-            if plane['runway'] == "Far":
-                sort_dict["FAR"].append(plane)
-            elif plane['runway'] == "Close":
-                sort_dict["CLOSE"].append(plane)
+    """
+    Serves HTML/Client.
+    """
+    planes_to_show = get_filtered_planes()
+    sort_dict = {"PLANES":[]}
+    
+    for plane in planes_to_show:
+        sort_dict["PLANES"].append(plane.__dict__)
+    
     return sort_dict
 
+def background_thread():
+    while True:
+        data = plane_tracker()
+        socketio.emit('update', data)
+        socketio.sleep(0.1)
 
-@app.route("/api/get_far_runway", methods=["GET"])
-def far_runway_planes():
-    planes = sorted_planes()
-    far_runway = []
-    for plane in planes:
-        if plane["runway"] == "Far":
-            far_runway.append(plane)
-    return far_runway
-
-
-@app.route("/api/get_close_runway", methods=["GET"])
-def close_runway_planes():
-    planes = sorted_planes()
-    far_runway = []
-    for plane in planes:
-        if plane["runway"] == "Close":
-            far_runway.append(plane)
-    return far_runway
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    sky = Sky()
+    thread = threading.Thread(target=background_thread)
+    thread.daemon = True
+    thread.start()
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)
