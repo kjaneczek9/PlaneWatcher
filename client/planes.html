@@ -1,127 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live @ LAX</title>
-    <style>
-        body {
-            font-family:  Monospace;
-            text-align: center;
-            font-size: large;
-            background-color: #15191e;
-            color: #79d18f;
-        }
-        table {
-            width: 90%;
-            margin: 20px auto;
-            border-collapse: collapse;
-        }
-        th {
-            border: 1px solid #636363;
-            padding: 10px;
-        }
-        td {
-            border: 1px solid #636363;
-            padding: 20px;
-        }
-        th {
-            background-color: #5f408d;
-            color: white;
-        }
-        .highlight { 
-            background-color: #890e0e;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Plane Tracker</title>
+
+<style>
+body {
+    margin: 0;
+    background: black;
+}
+canvas {
+    display: block;
+    margin: auto;
+    background: #111;
+}
+</style>
 </head>
 <body>
-    <h2>Live @ LAX</h2>
-    <table id="aircraftTable">
-        <thead>
-            <tr>
-                <th>Flight</th>
-                <th>Aircraft</th>
-                <th>Altitude (ft)</th>
-                <th>Speed (knots)</th>
-                <th>Lat</th>
-                <th>Lon</th>
-                <th>Runway</th>
-                <th>Destination</th>
-                <th>Airline</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
 
-    <script>
-        const API_URL = "http://192.168.1.160:5000/api/plane_tracker";
-        let dotCount = 3;
-        let countingDown = true; // Toggle direction
-    
-        async function fetchAircraftData() {
-            try {
-                const response = await fetch(API_URL);
-                const data = await response.json();
-                displayAircraftData(data);
-            } catch (error) {
-                console.error("Error fetching aircraft data:", error);
-            }
+<canvas id="c" width="600" height="600"></canvas>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+// PI
+const socket = io("http://192.168.1.160:5000");
+
+// MAC
+// const socket = io("http://192.168.1.219:8081");
+
+// LAX (map.png) boundaries
+const MIN_LAT = 33.926;
+const MAX_LAT = 33.954;
+const MIN_LON = -118.462;
+const MAX_LON = -118.407;
+
+const bgImage = new Image();
+bgImage.src = "map.png";
+
+bgImage.onload = () => {
+    draw({ PLANES: [] });
+};
+
+function drawBackground() {
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+}
+
+function map(lat, lon) {
+    const x = (lon - MIN_LON) / (MAX_LON - MIN_LON) * canvas.width;
+    const y = canvas.height - ( (lat - MIN_LAT) / (MAX_LAT - MIN_LAT) * canvas.height);
+
+    return { x, y };
+}
+
+function draw(data) {
+    drawBackground();
+
+    const all = [...(data.PLANES || [])];
+
+    // Box border
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    if (all.length === 0) {
+        ctx.fillStyle = "white";
+        ctx.fillText("No planes", 20, 30);
+        return;
+    }
+
+    all.forEach(p => {
+        if (!p.lat || !p.lon || p.lat === 0 || p.lon === 0) return;
+
+        const heavy_planes = ["777", "787", "747", "380"];
+        const is_heavy = p.aircraft && heavy_planes.some(type => p.aircraft.includes(type));
+
+        const pos = map(p.lat, p.lon);
+
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // Plane dot
+        // have dot color blink if heavy or not
+        ctx.beginPath();
+        let dotColor = "lime";
+
+        if (is_heavy) {
+            // we are just going to switch every 200 ms because thats a nice pace.
+            const blink = Math.floor(Date.now() / 200) % 2; 
+            dotColor = blink ? "red" : "lime";
         }
-    
-        function displayAircraftData(data) {
-            const tableBody = document.querySelector("#aircraftTable tbody");
-            tableBody.innerHTML = ""; // Clear previous data
-    
-            const allAircraft = [...data.CLOSE, ...data.FAR]; // Merge both response arrays
-    
-            if (allAircraft.length === 0) {
-                animateNoAircraftMessage(tableBody);
-                return;
+
+        ctx.arc(pos.x, pos.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+
+
+        // Dot labels
+        const lines = [
+            (p.flight_number || "").trim() || "???",
+            p.aircraft || "???",
+            p.altitude != null ? `${p.altitude} ft` : "",
+            p.speed != null ? `${p.speed} kts`: "",
+        ];
+
+        // Text color changes based on heavy
+        ctx.font = "16px sans-serif";
+        const lineHeight = 16;
+
+        lines.forEach((line, i) => {
+            // Default color
+            ctx.fillStyle = "white";
+        
+            // make aircraft line read if heavy
+            if (i === 1 && is_heavy) {
+                ctx.fillStyle = "red";
             }
-    
-            allAircraft.forEach(plane => {
-                const highlightClass = /777|747|380/.test(plane.aircraft) ? "highlight" : "";
-                const row = `
-                    <tr>
-                        <td class="${highlightClass}">${plane.flight.trim()}</td>
-                        <td class="${highlightClass}">${plane.aircraft}</td>
-                        <td class="${highlightClass}">${plane.altitude}</td>
-                        <td class="${highlightClass}">${plane.speed}</td>
-                        <td class="${highlightClass}">${plane.lat}</td>
-                        <td class="${highlightClass}">${plane.lon}</td>
-                        <td class="${highlightClass}">${plane.runway}</td>
-                        <td class="${highlightClass}">${plane.destination || "Unknown"}</td>
-                        <td class="${highlightClass}">${plane.airline || "Unknown"}</td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
-            });
-        }
-    
-        function animateNoAircraftMessage(tableBody) {
-            const dots = ".".repeat(dotCount);
-            tableBody.innerHTML = `<tr><td colspan='9' >No aircraft detected  ${dots}</td></tr>`;
-    
-            if (countingDown) {
-                dotCount--;
-                if (dotCount === 0) countingDown = false;
-            } else {
-                dotCount++;
-                if (dotCount === 3) countingDown = true;
-            }
-        }
-    
-        // Fetch data every second
-        fetchAircraftData();
-        setInterval(fetchAircraftData, 1000);
-        setInterval(() => {
-            if (document.querySelector("#aircraftTable tbody").textContent.includes("No aircraft detected")) {
-                animateNoAircraftMessage(document.querySelector("#aircraftTable tbody"));
-            }
-        }, 3500);
-    </script>
-    
+        
+            ctx.fillText(line, pos.x + 10, pos.y - 10 + i * lineHeight);
+        });
+    });
+}
+
+// prints to console
+socket.on("connect", () => {
+    console.log("Connected to server");
+});
+
+socket.on("disconnect", () => {
+    console.log("Disconnected");
+});
+
+socket.on("update", (data) => {
+    console.log("Received:", data);
+    draw(data);
+});
+
+// error message instead of bringing everything down.
+socket.on("connect_error", (err) => {
+    console.error("Connection error:", err.message);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "red";
+    ctx.fillText("SOCKET ERROR", 20, 30);
+});
+
+</script>
+
 </body>
 </html>
-
